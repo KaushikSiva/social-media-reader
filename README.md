@@ -47,13 +47,13 @@ DATASET_ID=your_brightdata_dataset_id  # Optional
 
 🔸 Read Reddit Comments (from JSON file)
 ```bash
-python readers/reddit_reader.py
+python -m readers/reddit_reader.py
 ```
 You’ll be prompted to input the path to a .reddit_comments.json file.
 
 🔸 Scrape Tweets via Selenium
 ```bash
-python readers/twitter_reader.py
+python -m readers/twitter_reader.py
 ```
 Make sure chromedriver is installed and in your PATH.
 
