@@ -1,0 +1,44 @@
+name: banter-agents
+description: Persona-driven banter agents starter pack
+entrypoint: ""
+
+resources:
+  - codex/personas.yaml
+  - codex/prompts/system.md
+  - codex/prompts/developer.md
+  - codex/prompts/user.md
+
+commands:
+  say:
+    description: Have one agent speak once
+    args:
+      - name: agent
+        required: true
+      - name: topic
+        required: true
+      - name: history
+        required: false
+      - name: round_rule
+        required: false
+      - name: length_limit
+        required: false
+    prompt:
+      - role: system
+        file: codex/prompts/system.md
+      - role: system
+        file: codex/prompts/developer.md
+      - role: user
+        file: codex/prompts/user.md
+
+  debate:
+    description: Quick multi-agent mini debate
+    args:
+      - name: topic
+        required: true
+    prompt:
+      - role: system
+        file: codex/prompts/system.md
+      - role: system
+        file: codex/prompts/developer.md
+      - role: user
+        file: codex/prompts/user.md
