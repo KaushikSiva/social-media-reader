@@ -220,8 +220,10 @@ async def run_async(args: argparse.Namespace) -> None:
         if history_turns:
             for turn in history_turns:
                 label = turn.llm_display or personas[turn.speaker].llm.get("display") or personas[turn.speaker].llm.get("provider", "")
+                persona_name = personas[turn.speaker].name
                 record = {
                     "agent": turn.speaker,
+                    "agent_name": persona_name,
                     "llm": label,
                     "text": turn.text,
                     "parameters": turn.parameters or llm_map.get(turn.speaker, (None, label, {}))[2],
@@ -229,7 +231,7 @@ async def run_async(args: argparse.Namespace) -> None:
                 records.append(record)
                 if not args.json:
                     suffix = f" ({label})" if label else ""
-                    print(f"- {turn.speaker}{suffix}: {turn.text}")
+                    print(f"- {persona_name} - {turn.speaker}{suffix}: {turn.text}")
             if not args.json:
                 print("\nContinuing conversation...\n")
 
@@ -244,15 +246,17 @@ async def run_async(args: argparse.Namespace) -> None:
             )
             label = turn.llm_display or personas[turn.speaker].llm.get("display") or personas[turn.speaker].llm.get("provider", "")
             suffix = f" ({label})" if label else ""
+            persona_name = personas[turn.speaker].name
             record = {
                 "agent": turn.speaker,
+                "agent_name": persona_name,
                 "llm": label,
                 "text": turn.text,
                 "parameters": turn.parameters or llm_map[turn.speaker][2],
             }
             records.append(record)
             if not args.json:
-                print(f"[{round_index + 1}] {turn.speaker}{suffix}: {turn.text}\n")
+                print(f"[{round_index + 1}] {persona_name} - {turn.speaker}{suffix}: {turn.text}\n")
 
             if hook is not None:
                 await hook(turn, round_index)
@@ -267,7 +271,7 @@ async def run_async(args: argparse.Namespace) -> None:
         for record in records:
             label = record["llm"]
             suffix = f" ({label})" if label else ""
-            print(f"- {record['agent']}{suffix}: {record['text']}")
+            print(f"- {record['agent_name']} - {record['agent']}{suffix}: {record['text']}")
 
 
 def main() -> None:
