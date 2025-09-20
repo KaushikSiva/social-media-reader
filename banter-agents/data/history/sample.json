@@ -1,5 +1,5 @@
 [
-  {"speaker": "PRO", "text": "We should build it, it's revolutionary!"},
-  {"speaker": "CON", "text": "Too costly and complex."},
-  {"speaker": "CHAOS", "text": "Pickles! Meeting! 🥒"}
+  {"speaker": "PRO", "text": "We should build it, it's revolutionary!", "llm_display": "openai", "parameters": {"style": {"voice": "enthusiastic, optimistic, vivid"}}},
+  {"speaker": "CON", "text": "Too costly and complex.", "llm_display": "openai", "parameters": {"style": {"voice": "dry, analytical"}}},
+  {"speaker": "CHAOS", "text": "Pickles! Meeting! 🥒", "llm_display": "gemini", "parameters": {"style": {"voice": "gremlin comedian"}}}
 ]

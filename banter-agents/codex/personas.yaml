@@ -18,6 +18,11 @@ personas:
     examples:
       - user: "Should we build the toast-rating AI?"
         reply: "Yes—this is a rocket croissant: layers, thrust, delight. Ship it yesterday."
+    llm:
+      provider: "openai"
+      display: "grok"
+      model: "gpt-4.1"
+      api_key_env: "OPENAI_API_KEY"
 
   CON:
     name: "Con"
@@ -38,6 +43,11 @@ personas:
     examples:
       - user: "Toast AI?"
         reply: "Edge case: burnt toast and budget—crispy all around. In this economy?"
+    llm:
+      provider: "openai"
+      display: "openai"
+      model: "gpt-4o-mini"
+      api_key_env: "OPENAI_API_KEY"
 
   CHAOS:
     name: "Chaos"
@@ -60,6 +70,11 @@ personas:
     examples:
       - user: "Toast AI?"
         reply: "Pickles! Toast! 🥒"
+    llm:
+      provider: "gemini"
+      display: "gemini"
+      model: "gemini-1.5-flash"
+      api_key_env: "GEMINI_API_KEY"
 
   MOD:
     name: "Mod"
@@ -78,3 +93,8 @@ personas:
     examples:
       - user: "Toast AI?"
         reply: "Round over: Pro wins one imaginary croissant point."
+    llm:
+      provider: "openai"
+      display: "openai"
+      model: "o4-mini"
+      api_key_env: "OPENAI_API_KEY"

@@ -24,6 +24,7 @@ class Persona:
     worldview: Dict[str, Any]
     style: Dict[str, Any]
     examples: List[Dict[str, Any]] = field(default_factory=list)
+    llm: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, key: str, raw: Dict[str, Any]) -> "Persona":
@@ -34,6 +35,7 @@ class Persona:
             worldview=raw.get("worldview", {}),
             style=raw.get("style", {}),
             examples=raw.get("examples", []),
+            llm=raw.get("llm", {}),
         )
 
     def to_template_context(self) -> Dict[str, Any]:
@@ -44,6 +46,7 @@ class Persona:
             "worldview": self.worldview,
             "style": self.style,
             "examples": self.examples,
+            "llm": self.llm,
         }
 
 
@@ -60,9 +63,19 @@ class PromptSet:
 class ConversationTurn:
     speaker: str
     text: str
+    llm_display: str = ""
+    parameters: Dict[str, Any] = field(default_factory=dict)
 
-    def as_dict(self) -> Dict[str, str]:
-        return {"speaker": self.speaker, "text": self.text}
+    def as_dict(self) -> Dict[str, Any]:
+        data: Dict[str, Any] = {
+            "speaker": self.speaker,
+            "text": self.text,
+        }
+        if self.llm_display:
+            data["llm_display"] = self.llm_display
+        if self.parameters:
+            data["parameters"] = self.parameters
+        return data
 
 
 class LLMClient(Protocol):
@@ -220,6 +233,8 @@ class Agent:
     llm: LLMClient
     default_round_rule: str = "Keep the banter friendly."
     default_length_limit: int = 280
+    llm_display: str = ""
+    parameters: Dict[str, Any] = field(default_factory=dict)
 
     def _build_messages(
         self,
@@ -260,7 +275,12 @@ class Agent:
         )
         payload = self.llm.complete(messages, **(llm_options or {}))
         reply = payload.strip()
-        return ConversationTurn(speaker=self.persona.key, text=reply)
+        return ConversationTurn(
+            speaker=self.persona.key,
+            text=reply,
+            llm_display=self.llm_display,
+            parameters=self.parameters,
+        )
 
     async def arespond(
         self,
@@ -279,7 +299,12 @@ class Agent:
         )
         payload = await _call_llm_async(self.llm, messages, llm_options)
         reply = payload.strip()
-        return ConversationTurn(speaker=self.persona.key, text=reply)
+        return ConversationTurn(
+            speaker=self.persona.key,
+            text=reply,
+            llm_display=self.llm_display,
+            parameters=self.parameters,
+        )
 
 
 @dataclass
