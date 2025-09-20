@@ -18,23 +18,45 @@ class OpenAILLMClient(LLMClient):
         default_options: Optional[Dict[str, Any]] = None,
     ) -> None:
         try:
-            from openai import OpenAI
+            from openai import AsyncOpenAI, OpenAI
         except ImportError as exc:  # pragma: no cover - surfaced at runtime for users.
             raise RuntimeError(
                 "openai package is required for OpenAILLMClient."
             ) from exc
 
         self._client = OpenAI(api_key=api_key, organization=organization)
+        self._async_client = AsyncOpenAI(api_key=api_key, organization=organization)
         self._model = model
         self._defaults = default_options or {}
 
     def complete(self, messages: Sequence[Dict[str, str]], **kwargs: Any) -> str:
-        payload = [{"role": msg["role"], "content": msg["content"]} for msg in messages]
-        options = {**self._defaults, **kwargs}
+        payload = self._format_messages(messages)
+        options = self._merge_options(dict(kwargs))
         response = self._client.chat.completions.create(
             model=self._model,
             messages=payload,
             **options,
         )
+        return self._extract_text(response)
+
+    async def acomplete(self, messages: Sequence[Dict[str, str]], **kwargs: Any) -> str:
+        payload = self._format_messages(messages)
+        options = self._merge_options(dict(kwargs))
+        response = await self._async_client.chat.completions.create(
+            model=self._model,
+            messages=payload,
+            **options,
+        )
+        return self._extract_text(response)
+
+    def _merge_options(self, overrides: Dict[str, Any]) -> Dict[str, Any]:
+        options = dict(self._defaults)
+        options.update(overrides)
+        return options
+
+    def _format_messages(self, messages: Sequence[Dict[str, str]]) -> Sequence[Dict[str, str]]:
+        return [{"role": msg["role"], "content": msg["content"]} for msg in messages]
+
+    def _extract_text(self, response: Any) -> str:
         choice = response.choices[0]
         return choice.message.content or ""

@@ -1,10 +1,12 @@
 """Conversation simulator wiring personas, prompts, and pluggable LLM clients."""
 from __future__ import annotations
 
+import asyncio
+import functools
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence
-import re
+from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, runtime_checkable
 
 try:  # PyYAML is optional but required to load personas.
     import yaml  # type: ignore
@@ -68,6 +70,14 @@ class LLMClient(Protocol):
 
     def complete(self, messages: Sequence[Dict[str, str]], **kwargs: Any) -> str:
         """Return the model response for the provided chat messages."""
+
+
+@runtime_checkable
+class SupportsAComplete(Protocol):
+    """Optional async interface for LLM backends."""
+
+    async def acomplete(self, messages: Sequence[Dict[str, str]], **kwargs: Any) -> str:
+        """Asynchronously return the model response."""
 
 
 class EchoLLMClient:
@@ -186,6 +196,19 @@ class TemplateRenderer:
         return None
 
 
+async def _call_llm_async(
+    llm: LLMClient,
+    messages: Sequence[Dict[str, str]],
+    options: Optional[Dict[str, Any]] = None,
+) -> str:
+    opts = options or {}
+    if isinstance(llm, SupportsAComplete):
+        return await llm.acomplete(messages, **opts)  # type: ignore[arg-type]
+    loop = asyncio.get_running_loop()
+    func = functools.partial(llm.complete, messages, **opts)
+    return await loop.run_in_executor(None, func)
+
+
 @dataclass
 class Agent:
     """Wraps a persona, prompt set, and model client to produce replies."""
@@ -198,6 +221,28 @@ class Agent:
     default_round_rule: str = "Keep the banter friendly."
     default_length_limit: int = 280
 
+    def _build_messages(
+        self,
+        conversation: "Conversation",
+        *,
+        topic: str,
+        round_rule: Optional[str],
+        length_limit: Optional[int],
+    ) -> List[Dict[str, str]]:
+        ctx = {
+            "persona": self.persona.to_template_context(),
+            "round_rule": round_rule or self.default_round_rule,
+            "length_limit": length_limit or self.default_length_limit,
+            "topic": topic,
+            "history": [turn.as_dict() for turn in conversation.turns],
+        }
+
+        return [
+            {"role": "system", "content": self.renderer.render(self.prompts.system, ctx)},
+            {"role": "system", "content": self.renderer.render(self.prompts.developer, ctx)},
+            {"role": "user", "content": self.renderer.render(self.prompts.user, ctx)},
+        ]
+
     def respond(
         self,
         conversation: "Conversation",
@@ -207,21 +252,32 @@ class Agent:
         length_limit: Optional[int] = None,
         llm_options: Optional[Dict[str, Any]] = None,
     ) -> ConversationTurn:
-        ctx = {
-            "persona": self.persona.to_template_context(),
-            "round_rule": round_rule or self.default_round_rule,
-            "length_limit": length_limit or self.default_length_limit,
-            "topic": topic,
-            "history": [turn.as_dict() for turn in conversation.turns],
-        }
-
-        messages = [
-            {"role": "system", "content": self.renderer.render(self.prompts.system, ctx)},
-            {"role": "system", "content": self.renderer.render(self.prompts.developer, ctx)},
-            {"role": "user", "content": self.renderer.render(self.prompts.user, ctx)},
-        ]
-
+        messages = self._build_messages(
+            conversation,
+            topic=topic,
+            round_rule=round_rule,
+            length_limit=length_limit,
+        )
         payload = self.llm.complete(messages, **(llm_options or {}))
+        reply = payload.strip()
+        return ConversationTurn(speaker=self.persona.key, text=reply)
+
+    async def arespond(
+        self,
+        conversation: "Conversation",
+        *,
+        topic: str,
+        round_rule: Optional[str] = None,
+        length_limit: Optional[int] = None,
+        llm_options: Optional[Dict[str, Any]] = None,
+    ) -> ConversationTurn:
+        messages = self._build_messages(
+            conversation,
+            topic=topic,
+            round_rule=round_rule,
+            length_limit=length_limit,
+        )
+        payload = await _call_llm_async(self.llm, messages, llm_options)
         reply = payload.strip()
         return ConversationTurn(speaker=self.persona.key, text=reply)
 
@@ -242,6 +298,24 @@ class Conversation:
         llm_options: Optional[Dict[str, Any]] = None,
     ) -> ConversationTurn:
         turn = agent.respond(
+            self,
+            topic=self.topic,
+            round_rule=round_rule,
+            length_limit=length_limit,
+            llm_options=llm_options,
+        )
+        self.turns.append(turn)
+        return turn
+
+    async def astep(
+        self,
+        agent: Agent,
+        *,
+        round_rule: Optional[str] = None,
+        length_limit: Optional[int] = None,
+        llm_options: Optional[Dict[str, Any]] = None,
+    ) -> ConversationTurn:
+        turn = await agent.arespond(
             self,
             topic=self.topic,
             round_rule=round_rule,

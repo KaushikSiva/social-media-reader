@@ -8,6 +8,7 @@ from .simulation import (
     LLMClient,
     PromptSet,
     TemplateRenderer,
+    SupportsAComplete,
     load_personas,
     load_prompts,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "LLMClient",
     "PromptSet",
     "TemplateRenderer",
+    "SupportsAComplete",
     "load_personas",
     "load_prompts",
     "OpenAILLMClient",
