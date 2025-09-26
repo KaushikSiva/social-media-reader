@@ -12,7 +12,7 @@ from .simulation import (
     load_personas,
     load_prompts,
 )
-from .clients import OpenAILLMClient, GeminiLLMClient
+from .clients import OpenAILLMClient, GeminiLLMClient, GrokLLMClient
 
 __all__ = [
     "Persona",
@@ -27,4 +27,5 @@ __all__ = [
     "load_prompts",
     "OpenAILLMClient",
     "GeminiLLMClient",
+    "GrokLLMClient",
 ]

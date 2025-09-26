@@ -1,6 +1,14 @@
 import os
+import sys
 import json
 import random
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
 from tts_voice import speak
 
 
@@ -53,7 +61,7 @@ def read_comments(filename):
         voice_id = user_voice_map.get(user, random.choice(voices))
         print(f"\n🗣️ {user} ({voice_id}): {text}")
         try:
-            speak.speak_with_inworld(text, voice_id)
+            speak.speak(text, voice_id)
         except Exception as e:
             print(f"❌ Failed to speak for {user}: {e}")
 

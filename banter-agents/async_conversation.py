@@ -9,11 +9,14 @@ import os
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
+import requests
+
 from engine import (
     Agent,
     Conversation,
     ConversationTurn,
     GeminiLLMClient,
+    GrokLLMClient,
     OpenAILLMClient,
     Persona,
     PromptSet,
@@ -54,6 +57,11 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.0,
         help="Seconds to wait after each turn (e.g. to allow external playback).",
+    )
+    parser.add_argument(
+        "--flask-url",
+        default=os.getenv("BANTER_FLASK_URL", "http://127.0.0.1:5053/"),
+        help="Agent playback server base URL. Set to 'none' to disable automatic playback.",
     )
     parser.add_argument(
         "--hook",
@@ -139,7 +147,14 @@ def get_api_key(provider: str, config: Dict[str, Any], persona_key: str) -> Tupl
         return explicit, env_identifier
 
     if not isinstance(api_key_env, str) or not api_key_env:
-        api_key_env = "OPENAI_API_KEY" if provider == "openai" else "GEMINI_API_KEY"
+        if provider == "openai":
+            api_key_env = "OPENAI_API_KEY"
+        elif provider == "gemini":
+            api_key_env = "GEMINI_API_KEY"
+        elif provider == "grok":
+            api_key_env = "GROK_API_KEY"
+        else:
+            raise SystemExit(f"Unknown provider '{provider}' for persona {persona_key} - specify llm.api_key_env")
 
     api_key = os.getenv(api_key_env)
     if not api_key:
@@ -175,6 +190,8 @@ def build_llm_clients(
                 cache[cache_key] = OpenAILLMClient(model=model, api_key=api_key, default_options=client_options)
             elif provider == "gemini":
                 cache[cache_key] = GeminiLLMClient(model=model, api_key=api_key, client_options=client_options)
+            elif provider == "grok":
+                cache[cache_key] = GrokLLMClient(model=model, api_key=api_key, client_options=client_options)
             else:
                 raise SystemExit(f"Unsupported LLM provider '{provider}' for persona {key}")
         display = config.get("display")
@@ -235,6 +252,10 @@ async def run_async(args: argparse.Namespace) -> None:
 
     hook = resolve_hook(args.hook)
 
+    flask_url = (args.flask_url or "").strip()
+    if flask_url.lower() == "none":
+        flask_url = ""
+
     for round_index in range(args.rounds):
         for agent in agents:
             turn = await conversation.astep(
@@ -257,6 +278,9 @@ async def run_async(args: argparse.Namespace) -> None:
             if hook is not None:
                 await hook(turn, round_index)
 
+            if flask_url:
+                await broadcast_to_flask(flask_url, turn)
+
             if args.delay > 0:
                 await asyncio.sleep(args.delay)
 
@@ -268,6 +292,26 @@ async def run_async(args: argparse.Namespace) -> None:
             label = record["llm"]
             suffix = f" ({label})" if label else ""
             print(f"- {record['agent']}{suffix}: {record['text']}")
+
+
+async def broadcast_to_flask(base_url: str, turn: ConversationTurn) -> None:
+    """Send the current turn to the Flask playback server."""
+
+    agent_id = (turn.speaker or "").strip()
+    if not agent_id:
+        return
+
+    payload = {"agent_id": agent_id, "text": turn.text}
+    endpoint = base_url.rstrip("/") + "/api/speak"
+
+    def _request() -> None:
+        try:
+            response = requests.post(endpoint, json=payload, timeout=120)
+            response.raise_for_status()
+        except Exception as exc:  # pragma: no cover - best effort side effect.
+            print(f"[flask] Failed to trigger playback for {agent_id}: {exc}")
+
+    await asyncio.to_thread(_request)
 
 
 def main() -> None:

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Agent Speaker</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background: radial-gradient(circle at top, #202b3b 0%, #0b111b 55%, #05070d 100%);
+            color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 1.75rem 2.5rem 2.5rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #9ad1ff;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .zoom-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-height: 0;
+        }
+        .active-speaker {
+            flex: 1;
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+            gap: 2rem;
+            align-items: stretch;
+            min-height: 0;
+        }
+        .active-speaker .video-wrapper {
+            position: relative;
+            background: rgba(9, 18, 32, 0.75);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 3px solid rgba(78, 179, 255, 0.55);
+            box-shadow: 0 35px 65px rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .active-speaker .video-wrapper::after {
+            content: "Active Speaker";
+            position: absolute;
+            bottom: 18px;
+            left: 24px;
+            padding: 0.35rem 0.85rem;
+            background: rgba(78, 179, 255, 0.85);
+            color: #041024;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+        .active-speaker img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+        .active-details {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: rgba(8, 14, 27, 0.8);
+            border-radius: 24px;
+            border: 1px solid rgba(154, 209, 255, 0.2);
+            box-shadow: inset 0 0 35px rgba(25, 58, 96, 0.35);
+            overflow: hidden;
+        }
+        .active-details h1 {
+            margin: 0;
+            font-size: 3.2rem;
+            letter-spacing: 0.05em;
+        }
+        .active-details .spoken-text {
+            font-size: 1.35rem;
+            line-height: 1.7;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 1.5rem;
+            border-radius: 18px;
+            border: 1px solid rgba(154, 209, 255, 0.2);
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+        .gallery {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            max-height: 210px;
+            overflow: hidden;
+        }
+        .gallery-tile {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid transparent;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.4);
+            flex: 0 0 180px;
+            height: 120px;
+        }
+        .gallery-tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            background: rgba(8, 14, 25, 0.85);
+            filter: saturate(0.85);
+        }
+        .gallery-tile .label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.6rem 0.9rem;
+            background: linear-gradient(180deg, rgba(5, 9, 16, 0.05) 0%, rgba(5, 9, 16, 0.85) 100%);
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .gallery-tile .label span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .gallery-tile .label span:first-child {
+            flex: 0 0 auto;
+            max-width: 90px;
+        }
+        .gallery-tile.active {
+            border-color: rgba(78, 179, 255, 0.75);
+            box-shadow: 0 25px 45px rgba(15, 68, 115, 0.5);
+        }
+        .info {
+            text-align: center;
+            max-width: 640px;
+            margin: auto;
+            padding: 1rem;
+        }
+        .info code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+        .status {
+            position: absolute;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: rgba(66, 194, 118, 0.2);
+            border: 1px solid rgba(66, 194, 118, 0.5);
+            color: #c8f7d4;
+        }
+        .status.error {
+            background: rgba(255, 82, 82, 0.2);
+            border: 1px solid rgba(255, 82, 82, 0.5);
+            color: #ffd6d6;
+        }
+    </style>
+</head>
+<body data-state-version="{{ state_version or 0 }}">
+    {% if message %}
+        <div class="status success">{{ message }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="status error">{{ error }}</div>
+    {% endif %}
+
+    {% if active_participant %}
+        <header>
+            <span>Live Session</span>
+            <span>{{ participants|length }} Participants</span>
+        </header>
+        <section class="zoom-stage">
+            <div class="active-speaker">
+                <div class="video-wrapper">
+                    <img src="{{ active_participant.image_url }}" alt="Active agent image">
+                </div>
+                <div class="active-details">
+                    <h1>{{ active_participant.agent_id }}</h1>
+                    <div class="spoken-text">{{ active_text or 'Waiting for audio...' }}</div>
+                </div>
+            </div>
+
+            {% if other_participants %}
+                <div class="gallery">
+                    {% for participant in other_participants %}
+                        <div class="gallery-tile{% if active_participant and participant.agent_id == active_participant.agent_id %} active{% endif %}">
+                            <img src="{{ participant.image_url }}" alt="{{ participant.agent_id }}">
+                            <div class="label">
+                                <span>{{ participant.agent_id }}</span>
+                                <span>{{ participant.text or "" }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    {% else %}
+        <div class="info">
+            <h1>Agent Speaker</h1>
+            <p>Provide <code>agent_id</code> and <code>text</code> as query parameters to trigger speech.</p>
+            <p>Example: <code>?agent_id=alice&amp;text=Hello%20world</code></p>
+        </div>
+    {% endif %}
+</body>
+<script>
+(function () {
+    let currentVersion = Number(document.body.dataset.stateVersion || "0");
+
+    async function poll() {
+        try {
+            const response = await fetch(`/api/state_version?ts=${Date.now()}`, { cache: "no-store" });
+            if (!response.ok) {
+                return;
+            }
+            const payload = await response.json();
+            const nextVersion = Number(payload.version || 0);
+            if (!Number.isFinite(nextVersion)) {
+                return;
+            }
+            if (nextVersion > currentVersion) {
+                // Version bumped (new speech triggered)
+                currentVersion = nextVersion;
+                window.location.reload();
+                return;
+            }
+        } catch (err) {
+            /* ignored */
+        }
+    }
+
+    setInterval(poll, 1000);
+})();
+</script>
+</html>

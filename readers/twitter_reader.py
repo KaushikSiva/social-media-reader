@@ -69,7 +69,7 @@ def main():
     for user, tweet in tweets:
         voice = voice_map[user]
         print(f"\n🎙️ {user} ({voice}): {tweet}")
-        speak.speak_with_inworld(f"{tweet}", voice)
+        speak.speak(f"{tweet}", voice)
 
 if __name__ == "__main__":
     main()

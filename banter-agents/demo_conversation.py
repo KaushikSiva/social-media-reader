@@ -11,6 +11,7 @@ from engine import (
     Agent,
     Conversation,
     GeminiLLMClient,
+    GrokLLMClient,
     OpenAILLMClient,
     Persona,
     PromptSet,
@@ -89,7 +90,14 @@ def get_api_key(provider: str, config: Dict[str, Any], persona_key: str) -> Tupl
         return explicit, env_identifier
 
     if not isinstance(api_key_env, str) or not api_key_env:
-        api_key_env = "OPENAI_API_KEY" if provider == "openai" else "GEMINI_API_KEY"
+        if provider == "openai":
+            api_key_env = "OPENAI_API_KEY"
+        elif provider == "gemini":
+            api_key_env = "GEMINI_API_KEY"
+        elif provider == "grok":
+            api_key_env = "GROK_API_KEY"
+        else:
+            raise SystemExit(f"Unknown provider '{provider}' for persona {persona_key} - specify llm.api_key_env")
 
     api_key = os.getenv(api_key_env)
     if not api_key:
@@ -125,6 +133,8 @@ def build_llm_clients(
                 cache[cache_key] = OpenAILLMClient(model=model, api_key=api_key, default_options=client_options)
             elif provider == "gemini":
                 cache[cache_key] = GeminiLLMClient(model=model, api_key=api_key, client_options=client_options)
+            elif provider == "grok":
+                cache[cache_key] = GrokLLMClient(model=model, api_key=api_key, client_options=client_options)
             else:
                 raise SystemExit(f"Unsupported LLM provider '{provider}' for persona {key}")
         display = config.get("display")

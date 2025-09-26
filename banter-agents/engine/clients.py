@@ -156,3 +156,76 @@ class GeminiLLMClient(LLMClient):
             if texts:
                 return "".join(texts)
         return data.get("text") or ""
+
+
+class GrokLLMClient(LLMClient):
+    """Adapter for xAI's Grok chat completions API."""
+
+    _API_ROOT = "https://api.x.ai/v1"
+
+    def __init__(
+        self,
+        *,
+        model: str,
+        api_key: Optional[str] = None,
+        client_options: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        try:
+            import requests
+        except ImportError as exc:  # pragma: no cover - surfaced only when requests missing.
+            raise RuntimeError(
+                "requests package is required for GrokLLMClient. Install it via `pip install requests`."
+            ) from exc
+
+        if not api_key:
+            raise RuntimeError("GrokLLMClient requires an API key")
+
+        self._requests = requests
+        self._session = requests.Session()
+        self._model = model
+        self._api_key = api_key
+        opts = dict(client_options or {})
+        self._timeout = opts.pop("timeout", 30)
+        self._defaults = opts
+
+    def complete(self, messages: Sequence[Dict[str, str]], **kwargs: Any) -> str:
+        payload = self._build_payload(messages)
+        options = dict(self._defaults)
+        options.update(kwargs)
+        payload.update({key: value for key, value in options.items() if value is not None})
+
+        response = self._session.post(
+            f"{self._API_ROOT}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=self._timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return self._extract_text(data)
+
+    def _build_payload(self, messages: Sequence[Dict[str, str]]) -> Dict[str, Any]:
+        formatted: List[Dict[str, str]] = []
+        for message in messages:
+            role = message.get("role") or "user"
+            content = message.get("content") or ""
+            formatted.append({"role": role, "content": content})
+        if not formatted:
+            formatted.append({"role": "user", "content": ""})
+        return {"model": self._model, "messages": formatted}
+
+    def _extract_text(self, data: Dict[str, Any]) -> str:
+        choices = data.get("choices") or []
+        for choice in choices:
+            message = choice.get("message") or {}
+            content = message.get("content")
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                pieces = [part.get("text") for part in content if isinstance(part, dict) and part.get("text")]
+                if pieces:
+                    return "".join(pieces)
+        return data.get("output") or ""

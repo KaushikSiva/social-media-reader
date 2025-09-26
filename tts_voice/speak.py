@@ -1,12 +1,15 @@
-import requests
+import os
 import io
 import json
-import base64
 import wave
-import os
+import base64
+import platform
+import subprocess
+
+import requests
 from dotenv import load_dotenv
 
-load_dotenv() 
+load_dotenv()
 
 
 API_KEY = os.getenv("INWORLD_API_TOKEN")
@@ -69,4 +72,27 @@ def speak_with_inworld(text, voice_id, sample_rate=48000):
         wf.setframerate(sample_rate)
         wf.writeframes(raw_audio_data.getvalue())
 
-    os.system("afplay output.wav")  # macOS; use `start` (Windows), `aplay` (Linux)
+    _play_audio("output.wav")
+
+
+def _play_audio(file_path: str) -> None:
+    system = platform.system()
+    if system == "Darwin":
+        subprocess.run(["afplay", file_path], check=True)
+    elif system == "Windows":
+        command = [
+            "powershell",
+            "-Command",
+            f"Start-Process -FilePath 'wmplayer' -ArgumentList '{file_path}' -Wait",
+        ]
+        subprocess.run(command, check=True)
+    else:
+        subprocess.run(["aplay", file_path], check=True)
+
+
+def speak(text, voice_id, sample_rate=48000):
+    """Compatibility wrapper so call sites can invoke provider.speak()."""
+    return speak_with_inworld(text, voice_id, sample_rate=sample_rate)
+
+
+__all__ = ["fetch_available_voices", "speak", "speak_with_inworld"]
