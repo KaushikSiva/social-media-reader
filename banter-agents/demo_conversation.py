@@ -175,17 +175,19 @@ def main() -> None:
     records = []
     for agent in agents:
         turn = conversation.step(agent)
+        persona_name = personas[turn.speaker].name
         label = turn.llm_display or personas[turn.speaker].llm.get("display") or personas[turn.speaker].llm.get("provider", "")
         suffix = f" ({label})" if label else ""
         record = {
             "agent": turn.speaker,
+            "agent_name": persona_name,
             "llm": label,
             "text": turn.text,
             "parameters": turn.parameters or llm_map[turn.speaker][2],
         }
         records.append(record)
         if not getattr(args, "json", False):
-            print(f"{turn.speaker}{suffix}: {turn.text}\n")
+            print(f"{persona_name} - {turn.speaker}{suffix}: {turn.text}\n")
 
     if getattr(args, "json", False):
         print(json.dumps(records, indent=2))
@@ -194,7 +196,7 @@ def main() -> None:
         for record in records:
             label = record["llm"]
             suffix = f" ({label})" if label else ""
-            print(f"- {record['agent']}{suffix}: {record['text']}")
+            print(f"- {record['agent_name']} - {record['agent']}{suffix}: {record['text']}")
 
 
 if __name__ == "__main__":
