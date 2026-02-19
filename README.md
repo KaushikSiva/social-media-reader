@@ -1,5 +1,8 @@
 # 🗣️ Social Media Reader
 
+[![Demo Video](https://img.youtube.com/vi/iImsYSOz5TA/maxresdefault.jpg)](https://youtu.be/iImsYSOz5TA)
+
+
 **Social Media Reader** is a Python-based tool that scrapes and reads social media content aloud using realistic AI-generated voices from [Inworld.ai](https://inworld.ai/). It currently supports Twitter and Reddit.
 
 ---
